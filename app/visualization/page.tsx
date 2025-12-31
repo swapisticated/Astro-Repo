@@ -9,24 +9,28 @@ import TopContributors from '@/components/TopContributors'
 import RepoActivity from '@/components/RepoActivity'
 import RepoSummary from '@/components/RepoSummary'
 import { ArrowLeft } from 'lucide-react'
-// Add these imports at the top of the file with other imports
 import { transformRepoToGraph } from '@/utils/graphData'
-// import ForceGraph from '@/components/ForceGraph'
-const ForceGraph = dynamic(() => import('@/components/ForceGraph'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-[500px] flex items-center justify-center">
-      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
-    </div>
-  )
-})
-import dynamic from 'next/dynamic'
+import ForceGraph from '@/components/ForceGraph'
 
+interface RepoItem {
+  type: 'dir' | 'file';
+  path: string;
+  name: string;
+  sha: string;
+  size: number;
+  url: string;
+  html_url: string;
+  git_url: string;
+  download_url: string | null;
+  children?: RepoItem[];
+}
 
-// Import RepoData type from utils/graphData instead of defining it locally
-import { RepoData } from '@/utils/graphData';
+interface RepoData {
+  readme: string;
+  files: RepoItem[];
+  branch: string;
+}
 
-// Create a wrapped component that uses searchParams
 const VisualizationContent = () => {
   const searchParams = useSearchParams()
   const [data, setData] = useState<RepoData | null>(null)
@@ -171,20 +175,6 @@ const VisualizationContent = () => {
             {/* Components for visualization */}
             <div className="flex flex-col space-y-12">
               {/* 3D Visualization Container */}
-              {/* <div className="flex w-full justify-center">
-                {(() => {
-                  const { transformRepoToGraph } = require('@/utils/graphData')
-                  const ForceGraph = require('@/components/ForceGraph').default
-                  return <ForceGraph
-                    graphData={transformRepoToGraph(data)}
-                    repoName={`${owner}/${repo}`}
-                    owner={owner!}
-                    repo={repo!}
-                    branch={branch || 'main'}
-                  />
-                })()}
-              </div> */}
-
               <div className="flex w-full justify-center">
                 <ForceGraph
                   graphData={transformRepoToGraph(data)}

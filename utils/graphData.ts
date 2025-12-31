@@ -35,6 +35,10 @@ export interface GraphNode {
   size: number;
   color: string;
   val: number; // Size for visualization
+  depth: number;
+  hasChildren: boolean;
+  expanded: boolean;
+  parentId: string|null // useul for expand/collpse logic
 }
 
 export interface GraphLink {
@@ -152,10 +156,15 @@ export const transformRepoToGraph = (repoData: RepoData): GraphData => {
     size: 0,
     color: '#6cc644',
     val: 6,
+    depth: 0,
+    parentId:null,
+    hasChildren:repoData.files.length > 0,
+    expanded: true,
+ 
   });
 
   // Process files and directories recursively
-  const processFiles = (files: RepoFile[], parentId = rootNodeId) => {
+  const processFiles = (files: RepoFile[], parentId = rootNodeId, depth = 1) => {
     for (const file of files) {
       const nodeId = file.path;
 
@@ -168,6 +177,10 @@ export const transformRepoToGraph = (repoData: RepoData): GraphData => {
         size: file.size,
         color: getFileColor(file.name, file.type),
         val: getNodeSize(file.size, file.type),
+         depth,
+    parentId:parentId,
+    hasChildren:  file.type === 'dir' && file.children !== undefined && file.children.length > 0,
+    expanded: false,
       });
 
       // Link to parent
@@ -178,7 +191,7 @@ export const transformRepoToGraph = (repoData: RepoData): GraphData => {
 
       // Process children if this is a directory with children
       if (file.type === 'dir' && file.children && file.children.length > 0) {
-        processFiles(file.children, nodeId);
+        processFiles(file.children, nodeId, depth+1);
       }
     }
   };

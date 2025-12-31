@@ -74,7 +74,7 @@ async function fetchRepoContentsRecursively(
     repo: string,
     branch: string | null,
     path: string = '',
-    depth: number = 2,
+    depth: number = 5,
     currentDepth: number = 0
 ): Promise<RepoItem[]> {
     if (currentDepth >= depth) {

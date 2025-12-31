@@ -2,7 +2,7 @@
 /* eslint-disable */
 // @ts-nocheck
 'use client';
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import ForceGraph3D, { NodeObject } from 'react-force-graph-3d';
 import { GraphData, GraphNode } from '@/utils/graphData';
 import { motion } from 'framer-motion';
@@ -34,6 +34,8 @@ const ForceGraph = ({ graphData, repoName, owner, repo, branch }: ForceGraphProp
   const [showSidebar, setShowSidebar] = useState(false);
   const [fileSummary, setFileSummary] = useState<string | null>(null);
   const [isCacheEnabled, setIsCacheEnabled] = useState(true);
+  // const [isExpanded, setIsExpanded] = useState(); wrong bitch 
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['root'])); //what
 
   // Auto-rotation state
   const [autoRotate, setAutoRotate] = useState(true);
@@ -83,6 +85,7 @@ const ForceGraph = ({ graphData, repoName, owner, repo, branch }: ForceGraphProp
         forceEngine.charge()
           .strength((node: any) => node.id === 'root' ? -150 : node.type === 'dir' ? -100 : -30)
           .distanceMax(300);
+          
 
         // Add radial force to create layers based on path depth
         forceEngine.radial((node: any) => {

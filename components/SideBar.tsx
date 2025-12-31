@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Settings, Sparkles, Layers, Info, ChevronRight, ChevronLeft, X } from "lucide-react"
+import { Settings, Sparkles,  Layers,  Info, ChevronRight, ChevronLeft } from "lucide-react"
 import { motion } from "framer-motion"
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -117,7 +117,7 @@ export function GeminiSidebar({ defaultOpen = false, position = "left", summary,
               className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-700/50 transition-colors"
               aria-label="Close sidebar"
             >
-              <X className="w-5 h-5 text-gray-400 hover:text-gray-200" />
+              <div className="w-5 h-5 text-gray-400 hover:text-gray-200" />
             </button>
 
             {/* Header */}
