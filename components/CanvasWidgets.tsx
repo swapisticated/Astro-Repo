@@ -32,7 +32,7 @@ export const CanvasWidget: React.FC<CanvasWidgetProps> = ({
       case "comic":
         return "bg-[#f0e6d2]/90 border-black border-2 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] text-black";
       default:
-        return "bg-white/90 border-[#d0d7de] shadow-lg text-[#1f2328]";
+        return "bg-white/80 backdrop-blur-md border-[1px] border-gray-200 shadow-sm text-gray-900";
     }
   };
 

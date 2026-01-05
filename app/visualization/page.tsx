@@ -29,6 +29,7 @@ import {
   ContributorsWidget,
   ActivityWidget,
 } from "@/components/CanvasWidgets";
+import { ImmersiveLoader } from "@/components/ImmersiveLoader";
 import {
   FileSystemNode,
   NodeType,
@@ -141,13 +142,14 @@ function getThemeStyles(theme: VisualizationTheme) {
       };
     default: // modern
       return {
-        bg: "bg-[#0a0a1f]",
-        panelBg: "bg-slate-900/95",
-        text: "text-slate-100",
-        textMuted: "text-slate-400",
-        border: "border-slate-700",
-        accent: "text-blue-400",
-        buttonBg: "bg-blue-600 hover:bg-blue-700",
+        bg: "bg-zinc-50",
+        panelBg:
+          "bg-white/80 backdrop-blur-md shadow-sm border border-gray-200",
+        text: "text-gray-900",
+        textMuted: "text-gray-500",
+        border: "border-gray-200",
+        accent: "text-indigo-600",
+        buttonBg: "bg-gray-900 hover:bg-black text-white",
         buttonText: "text-white",
         font: "",
       };
@@ -411,27 +413,9 @@ const VisualizationContent = () => {
   );
 
   // Fullscreen Loading
+  // Fullscreen Loading
   if (isLoading) {
-    return (
-      <div
-        className={`fixed inset-0 ${styles.bg} flex items-center justify-center`}
-      >
-        <div className="flex flex-col items-center">
-          <div className="relative h-16 w-16">
-            <div
-              className={`absolute inset-0 rounded-full border-t-2 ${styles.border} animate-spin`}
-            ></div>
-            <div
-              className={`absolute inset-3 rounded-full border-t-2 ${styles.accent} animate-spin-slow`}
-              style={{ animationDirection: "reverse" }}
-            ></div>
-          </div>
-          <p className={`text-lg ${styles.textMuted} mt-4 ${styles.font}`}>
-            Loading repository...
-          </p>
-        </div>
-      </div>
-    );
+    return <ImmersiveLoader />;
   }
 
   // Fullscreen Error
@@ -576,13 +560,7 @@ const VisualizationContent = () => {
 // Main page component with Suspense boundary
 const VisualizationPage = () => {
   return (
-    <Suspense
-      fallback={
-        <div className="fixed inset-0 bg-[#0a0a1f] flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
-        </div>
-      }
-    >
+    <Suspense fallback={<ImmersiveLoader />}>
       <VisualizationContent />
     </Suspense>
   );
