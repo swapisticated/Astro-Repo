@@ -1,19 +1,42 @@
-"use client"
+"use client";
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
-import React, { useEffect, useState, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { motion } from 'framer-motion'
-import Link from 'next/link'
-import CommitHistory from '@/components/CommitHistory'
-import TopContributors from '@/components/TopContributors'
-import RepoActivity from '@/components/RepoActivity'
-import RepoSummary from '@/components/RepoSummary'
-import { ArrowLeft } from 'lucide-react'
-import { transformRepoToGraph } from '@/utils/graphData'
-import ForceGraph from '@/components/ForceGraph'
+import React, { useEffect, useState, Suspense, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
+import CommitHistory from "@/components/CommitHistory";
+import TopContributors from "@/components/TopContributors";
+import RepoActivity from "@/components/RepoActivity";
+import {
+  ArrowLeft,
+  Palette,
+  Info,
+  GitCommit,
+  Users,
+  Activity,
+  X,
+  FolderTree,
+  FileText,
+  HardDrive,
+  GitBranch,
+} from "lucide-react";
+import { RepoVisualizer } from "@/components/mapmyrepo/RepoVisualizer";
+import { Sidebar } from "@/components/mapmyrepo/Sidebar";
+import {
+  StatsWidget,
+  CommitsWidget,
+  ContributorsWidget,
+  ActivityWidget,
+} from "@/components/CanvasWidgets";
+import {
+  FileSystemNode,
+  NodeType,
+  VisualizationTheme,
+} from "@/types/mapmyrepo";
 
 interface RepoItem {
-  type: 'dir' | 'file';
+  type: "dir" | "file";
   path: string;
   name: string;
   sha: string;
@@ -31,212 +54,538 @@ interface RepoData {
   branch: string;
 }
 
+// Convert RepoItem to FileSystemNode for 2D visualization
+function convertToFileSystemNode(
+  item: RepoItem,
+  _parentPath: string = ""
+): FileSystemNode {
+  const node: FileSystemNode = {
+    name: item.name,
+    type: item.type === "dir" ? NodeType.FOLDER : NodeType.FILE,
+    path: item.path,
+    size: item.size,
+    children: undefined,
+    downloadUrl: item.download_url || undefined,
+  };
+
+  if (item.children && item.children.length > 0) {
+    node.children = item.children.map((child) =>
+      convertToFileSystemNode(child, item.path)
+    );
+  }
+
+  return node;
+}
+
+// Helper to count files and dirs recursively
+function countNodes(files: RepoItem[]): {
+  files: number;
+  dirs: number;
+  totalSize: number;
+} {
+  let fileCount = 0;
+  let dirCount = 0;
+  let totalSize = 0;
+
+  const traverse = (items: RepoItem[]) => {
+    for (const item of items) {
+      if (item.type === "dir") {
+        dirCount++;
+        if (item.children) traverse(item.children);
+      } else {
+        fileCount++;
+        totalSize += item.size || 0;
+      }
+    }
+  };
+
+  traverse(files);
+  return { files: fileCount, dirs: dirCount, totalSize };
+}
+
+// Format bytes to human readable
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+}
+
+// Theme-aware styling
+function getThemeStyles(theme: VisualizationTheme) {
+  switch (theme) {
+    case "pencil":
+      return {
+        bg: "bg-[#f5f5dc]",
+        panelBg: "bg-white/95",
+        text: "text-gray-900",
+        textMuted: "text-gray-600",
+        border: "border-gray-900",
+        accent: "text-gray-900",
+        buttonBg: "bg-gray-900 hover:bg-gray-800",
+        buttonText: "text-white",
+        font: "font-['Patrick_Hand']",
+      };
+    case "comic":
+      return {
+        bg: "bg-[#f0e6d2]",
+        panelBg: "bg-[#fff8e7]/95",
+        text: "text-gray-900",
+        textMuted: "text-gray-700",
+        border: "border-orange-400",
+        accent: "text-orange-600",
+        buttonBg: "bg-orange-500 hover:bg-orange-600",
+        buttonText: "text-white",
+        font: "font-['Patrick_Hand']",
+      };
+    default: // modern
+      return {
+        bg: "bg-[#0a0a1f]",
+        panelBg: "bg-slate-900/95",
+        text: "text-slate-100",
+        textMuted: "text-slate-400",
+        border: "border-slate-700",
+        accent: "text-blue-400",
+        buttonBg: "bg-blue-600 hover:bg-blue-700",
+        buttonText: "text-white",
+        font: "",
+      };
+  }
+}
+
 const VisualizationContent = () => {
-  const searchParams = useSearchParams()
-  const [data, setData] = useState<RepoData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [stars, setStars] = useState<{ top: number; left: number; size: number; delay: number; opacity: number }[]>([])
+  const searchParams = useSearchParams();
+  const [data, setData] = useState<RepoData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Theme State
+  const [theme, setTheme] = useState<VisualizationTheme>("modern");
+  const [selectedNode, setSelectedNode] = useState<FileSystemNode | null>(null);
+
+  // Panel visibility states
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
+  const [activeInfoTab, setActiveInfoTab] = useState<
+    "overview" | "commits" | "contributors" | "activity"
+  >("overview");
 
   // Get parameters from URL
-  const owner = searchParams.get('owner')
-  const repo = searchParams.get('repo')
-  const branch = searchParams.get('branch')
-  const depth = searchParams.get('depth') || '3' // Default to 3 levels deep
+  const owner = searchParams.get("owner");
+  const repo = searchParams.get("repo");
+  const branch = searchParams.get("branch");
+  const depth = searchParams.get("depth") || "2"; // Shallow load, lazy fetch on expand
 
-  // Generate stars for the background - keeping it subtle and elegant
-  useEffect(() => {
-    const generateStars = () => {
-      const newStars = []
-      for (let i = 0; i < 100; i++) {
-        newStars.push({
-          top: Math.random() * 100,
-          left: Math.random() * 100,
-          size: Math.random() * 1.5 + 0.2, // Smaller stars
-          delay: Math.random() * 5,
-          opacity: Math.random() * 0.5 + 0.1 // More subtle opacity
-        })
-      }
-      setStars(newStars)
-    }
+  const styles = getThemeStyles(theme);
 
-    generateStars()
-  }, [])
+  // Memoize the 2D visualization data
+  const memoized2DData = useMemo(() => {
+    if (!data) return null;
+    const rootItem: RepoItem = {
+      type: "dir" as const,
+      path: repo || "root",
+      name: repo || "root",
+      sha: "",
+      size: 0,
+      url: "",
+      html_url: "",
+      git_url: "",
+      download_url: null,
+      children: data.files,
+    };
+    return convertToFileSystemNode(rootItem);
+  }, [data, repo]);
+
+  // Compute stats
+  const stats = useMemo(() => {
+    if (!data) return null;
+    return countNodes(data.files);
+  }, [data]);
 
   // Fetch repository data
   useEffect(() => {
     const fetchData = async () => {
       if (!owner || !repo) {
-        setError('Missing repository information')
-        setIsLoading(false)
-        return
+        setError("Missing repository information");
+        setIsLoading(false);
+        return;
       }
 
       try {
-        setIsLoading(true)
-        const branchParam = branch ? `&branch=${encodeURIComponent(branch)}` : ''
-        const depthParam = `&depth=${encodeURIComponent(depth)}`
-        const res = await fetch(`/api/fetchRepo?owner=${owner}&repo=${repo}${branchParam}${depthParam}`)
+        setIsLoading(true);
+        const branchParam = branch
+          ? `&branch=${encodeURIComponent(branch)}`
+          : "";
+        const depthParam = `&depth=${encodeURIComponent(depth)}`;
+        const res = await fetch(
+          `/api/fetchRepo?owner=${owner}&repo=${repo}${branchParam}${depthParam}`
+        );
 
         if (!res.ok) {
-          throw new Error(`Failed to fetch repository: ${res.status} ${res.statusText}`)
+          throw new Error(
+            `Failed to fetch repository: ${res.status} ${res.statusText}`
+          );
         }
 
-        const repoData = await res.json()
-        setData(repoData)
+        const repoData = await res.json();
+        setData(repoData);
       } catch (error) {
-        console.error('Error fetching repository:', error)
-        setError(error instanceof Error ? error.message : 'Failed to fetch repository data')
+        console.error("Error fetching repository:", error);
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch repository data"
+        );
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchData()
-  }, [owner, repo, branch, depth])
+    fetchData();
+  }, [owner, repo, branch, depth]);
+
+  // Info Panel Component
+  const InfoPanel = () => (
+    <AnimatePresence>
+      {showInfoPanel && (
+        <motion.div
+          initial={{ opacity: 0, x: 400 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 400 }}
+          transition={{ type: "spring", damping: 25, stiffness: 200 }}
+          className={`fixed right-0 top-0 h-full w-[420px] ${styles.panelBg} backdrop-blur-xl ${styles.border} border-l shadow-2xl z-50 flex flex-col`}
+        >
+          {/* Panel Header */}
+          <div
+            className={`flex items-center justify-between p-4 border-b ${styles.border}`}
+          >
+            <h2
+              className={`text-lg font-semibold ${styles.text} ${styles.font}`}
+            >
+              Repository Info
+            </h2>
+            <button
+              onClick={() => setShowInfoPanel(false)}
+              className={`p-2 rounded-full hover:bg-slate-800/50 transition-colors ${styles.textMuted}`}
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Tab Navigation */}
+          <div className={`flex border-b ${styles.border} px-2`}>
+            {[
+              { id: "overview", label: "Overview", icon: Info },
+              { id: "commits", label: "Commits", icon: GitCommit },
+              { id: "contributors", label: "Contributors", icon: Users },
+              { id: "activity", label: "Activity", icon: Activity },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveInfoTab(tab.id as typeof activeInfoTab)}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
+                  activeInfoTab === tab.id
+                    ? `${styles.accent} border-current`
+                    : `${styles.textMuted} border-transparent hover:${styles.text}`
+                } ${styles.font}`}
+              >
+                <tab.icon className="h-4 w-4" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {activeInfoTab === "overview" && stats && (
+              <div className="space-y-6">
+                {/* Repository Name */}
+                <div className={`text-center pb-4 border-b ${styles.border}`}>
+                  <h3
+                    className={`text-xl font-bold ${styles.text} ${styles.font}`}
+                  >
+                    {owner}/{repo}
+                  </h3>
+                  <p
+                    className={`text-sm ${styles.textMuted} flex items-center justify-center gap-2 mt-1`}
+                  >
+                    <GitBranch className="h-4 w-4" />
+                    {branch || "main"}
+                  </p>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div
+                    className={`p-4 rounded-lg ${
+                      theme === "modern" ? "bg-slate-800/50" : "bg-white/50"
+                    } border ${styles.border}`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className={`h-5 w-5 ${styles.accent}`} />
+                      <span
+                        className={`text-sm ${styles.textMuted} ${styles.font}`}
+                      >
+                        Files
+                      </span>
+                    </div>
+                    <p
+                      className={`text-2xl font-bold ${styles.text} ${styles.font}`}
+                    >
+                      {stats.files}
+                    </p>
+                  </div>
+
+                  <div
+                    className={`p-4 rounded-lg ${
+                      theme === "modern" ? "bg-slate-800/50" : "bg-white/50"
+                    } border ${styles.border}`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <FolderTree className={`h-5 w-5 ${styles.accent}`} />
+                      <span
+                        className={`text-sm ${styles.textMuted} ${styles.font}`}
+                      >
+                        Directories
+                      </span>
+                    </div>
+                    <p
+                      className={`text-2xl font-bold ${styles.text} ${styles.font}`}
+                    >
+                      {stats.dirs}
+                    </p>
+                  </div>
+
+                  <div
+                    className={`p-4 rounded-lg ${
+                      theme === "modern" ? "bg-slate-800/50" : "bg-white/50"
+                    } border ${styles.border} col-span-2`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <HardDrive className={`h-5 w-5 ${styles.accent}`} />
+                      <span
+                        className={`text-sm ${styles.textMuted} ${styles.font}`}
+                      >
+                        Total Size
+                      </span>
+                    </div>
+                    <p
+                      className={`text-2xl font-bold ${styles.text} ${styles.font}`}
+                    >
+                      {formatBytes(stats.totalSize)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* GitHub Link */}
+                <a
+                  href={`https://github.com/${owner}/${repo}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`block w-full text-center py-3 rounded-lg ${styles.buttonBg} ${styles.buttonText} font-medium transition-colors ${styles.font}`}
+                >
+                  View on GitHub
+                </a>
+              </div>
+            )}
+
+            {activeInfoTab === "commits" && (
+              <CommitHistory
+                owner={owner || ""}
+                repo={repo || ""}
+                branch={branch || "main"}
+              />
+            )}
+
+            {activeInfoTab === "contributors" && (
+              <TopContributors owner={owner || ""} repo={repo || ""} />
+            )}
+
+            {activeInfoTab === "activity" && (
+              <RepoActivity owner={owner || ""} repo={repo || ""} />
+            )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  // Fullscreen Loading
+  if (isLoading) {
+    return (
+      <div
+        className={`fixed inset-0 ${styles.bg} flex items-center justify-center`}
+      >
+        <div className="flex flex-col items-center">
+          <div className="relative h-16 w-16">
+            <div
+              className={`absolute inset-0 rounded-full border-t-2 ${styles.border} animate-spin`}
+            ></div>
+            <div
+              className={`absolute inset-3 rounded-full border-t-2 ${styles.accent} animate-spin-slow`}
+              style={{ animationDirection: "reverse" }}
+            ></div>
+          </div>
+          <p className={`text-lg ${styles.textMuted} mt-4 ${styles.font}`}>
+            Loading repository...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Fullscreen Error
+  if (error) {
+    return (
+      <div
+        className={`fixed inset-0 ${styles.bg} flex items-center justify-center`}
+      >
+        <div
+          className={`max-w-md p-8 rounded-xl ${styles.panelBg} border ${styles.border}`}
+        >
+          <h2
+            className={`text-2xl font-bold ${styles.text} mb-4 ${styles.font}`}
+          >
+            Error
+          </h2>
+          <p className={`${styles.textMuted} mb-6`}>{error}</p>
+          <Link
+            href="/"
+            className={`block text-center py-3 rounded-lg ${styles.buttonBg} ${styles.buttonText} font-medium ${styles.font}`}
+          >
+            Go Back
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#000510] to-[#001030] text-white relative overflow-hidden">
-      {/* Subtle star background */}
-      {stars.map((star, index) => (
-        <div
-          key={index}
-          className="absolute rounded-full animate-twinkle"
-          style={{
-            top: `${star.top}%`,
-            left: `${star.left}%`,
-            width: `${star.size}px`,
-            height: `${star.size}px`,
-            backgroundColor: '#ffffff',
-            opacity: star.opacity,
-            animationDelay: `${star.delay}s`,
-          }}
-        />
-      ))}
+    <div className={`fixed inset-0 ${styles.bg} overflow-hidden`}>
+      {/* Fullscreen Canvas */}
+      {memoized2DData && (
+        <div className="absolute inset-0">
+          <RepoVisualizer
+            data={memoized2DData}
+            onNodeSelect={(node) => setSelectedNode(node)}
+            theme={theme}
+            owner={owner || undefined}
+            repo={repo || undefined}
+            branch={branch || undefined}
+          />
+        </div>
+      )}
 
-      {/* Main content */}
-      <div className="container mx-auto px-4 py-8 relative z-10">
-        <div className="flex justify-between items-center mb-8">
+      {/* Top Bar - Floating */}
+      <div className="absolute top-0 left-0 right-0 z-40 pointer-events-none">
+        <div className="flex items-center justify-between p-4">
+          {/* Back Button */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
+            className="pointer-events-auto"
           >
-            <Link href="/" className="text-slate-300 hover:text-white flex items-center transition-colors">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Home
+            <Link
+              href="/"
+              className={`flex items-center gap-2 px-4 py-2 rounded-full ${styles.panelBg} backdrop-blur-xl border ${styles.border} ${styles.text} hover:opacity-80 transition-opacity ${styles.font}`}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="text-sm font-medium">Back</span>
             </Link>
           </motion.div>
 
-          <motion.h1
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8 }}
-            className="text-2xl md:text-3xl font-light tracking-wider text-slate-100"
-          >
-            Astro Repo
-          </motion.h1>
-        </div>
-
-        {isLoading ? (
-          <div className="flex justify-center items-center h-[70vh]">
-            <div className="flex flex-col items-center">
-              <div className="relative h-16 w-16">
-                <div className="absolute inset-0 rounded-full border-t-2 border-slate-400 animate-spin"></div>
-                <div className="absolute inset-3 rounded-full border-t-2 border-slate-200 animate-spin-slow"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="h-2 w-2 rounded-full bg-white"></div>
-                </div>
-              </div>
-              <p className="text-lg text-slate-300 mt-4 font-light">Exploring the cosmos...</p>
-            </div>
-          </div>
-        ) : error ? (
-          <div className="max-w-2xl mx-auto bg-[rgba(0,10,30,0.5)] backdrop-blur-sm rounded-lg p-8 border border-red-900/30 shadow-lg">
-            <h2 className="text-2xl font-light text-red-300 mb-4">Error</h2>
-            <p className="text-slate-300 mb-6">{error}</p>
-            <Link href="/" className="bg-slate-800 text-white font-light px-6 py-3 rounded-md hover:bg-slate-700 transition-all duration-300">
-              Try Again
-            </Link>
-          </div>
-        ) : data && (
+          {/* Center - Repo Name */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="max-w-6xl mx-auto"
+            className={`px-6 py-2 rounded-full ${styles.panelBg} backdrop-blur-xl border ${styles.border} pointer-events-auto`}
           >
-            <h2 className="text-2xl font-light mb-6 text-center text-slate-200">
-              <span className="text-slate-100">
-                {owner}/{repo}{branch ? ` (${branch})` : ''}
-              </span>
-            </h2>
+            <h1 className={`text-sm font-medium ${styles.text} ${styles.font}`}>
+              {owner}/{repo}
+              {branch && branch !== "main" && (
+                <span className={`ml-2 ${styles.textMuted}`}>({branch})</span>
+              )}
+            </h1>
+          </motion.div>
 
-            {/* Components for visualization */}
-            <div className="flex flex-col space-y-12">
-              {/* 3D Visualization Container */}
-              <div className="flex w-full justify-center">
-                <ForceGraph
-                  graphData={transformRepoToGraph(data)}
-                  repoName={`${owner}/${repo}`}
-                  owner={owner!}
-                  repo={repo!}
-                  branch={branch || 'main'}
-                />
-              </div>
-
-              {/* Repository Summary */}
-              <div className="w-full">
-                <RepoSummary repoData={data} repoUrl={`https://github.com/${owner}/${repo}`} />
-              </div>
-
-              {/* Activity and Contributors Section */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-1">
-                  <CommitHistory
-                    owner={owner || ''}
-                    repo={repo || ''}
-                    branch={branch || 'main'}
-                  />
-                </div>
-                <div className="lg:col-span-1">
-                  <TopContributors
-                    owner={owner || ''}
-                    repo={repo || ''}
-                  />
-                </div>
-                <div className="lg:col-span-1">
-                  <RepoActivity
-                    owner={owner || ''}
-                    repo={repo || ''}
-                  />
-                </div>
-              </div>
+          {/* Right - Controls */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-3 pointer-events-auto"
+          >
+            {/* Theme Selector */}
+            <div
+              className={`relative ${styles.panelBg} backdrop-blur-xl rounded-full border ${styles.border}`}
+            >
+              <select
+                value={theme}
+                onChange={(e) => setTheme(e.target.value as VisualizationTheme)}
+                className={`appearance-none bg-transparent ${styles.text} text-sm font-medium px-4 py-2 pr-10 rounded-full cursor-pointer focus:outline-none ${styles.font}`}
+              >
+                <option value="modern">Modern</option>
+                <option value="pencil">Pencil</option>
+                <option value="comic">Comic</option>
+              </select>
+              <Palette
+                className={`absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none ${styles.textMuted}`}
+              />
             </div>
           </motion.div>
-        )}
-
-        <div className="mt-16 text-center text-sm text-slate-400 opacity-70">
-          <p>© {new Date().getFullYear()} Astro Repo | Venture through the digital universe</p>
         </div>
       </div>
+
+      {/* Floating Canvas Widgets */}
+
+      {/* Left Side Widget Stack - Above Legend */}
+      <div className="absolute top-20 left-4 z-30 pointer-events-auto w-fit space-y-3 max-h-[calc(100vh-280px)] overflow-y-auto scrollbar-thin">
+        {/* Stats Widget */}
+        <StatsWidget
+          theme={theme}
+          stats={stats}
+          owner={owner || ""}
+          repo={repo || ""}
+          branch={branch || undefined}
+        />
+
+        {/* Commits Widget */}
+        <CommitsWidget
+          theme={theme}
+          owner={owner || ""}
+          repo={repo || ""}
+          branch={branch || undefined}
+        />
+
+        {/* Contributors Widget */}
+        <ContributorsWidget
+          theme={theme}
+          owner={owner || ""}
+          repo={repo || ""}
+        />
+
+        {/* Activity Widget */}
+        <ActivityWidget theme={theme} owner={owner || ""} repo={repo || ""} />
+      </div>
+
+      {/* Node Detail Sidebar (from RepoVisualizer) - for full details */}
+      <Sidebar node={selectedNode} rootNode={memoized2DData} theme={theme} />
     </div>
-  )
-}
+  );
+};
 
 // Main page component with Suspense boundary
 const VisualizationPage = () => {
   return (
-    <Suspense 
+    <Suspense
       fallback={
-        <div className="flex justify-center items-center h-screen bg-gradient-to-b from-[#000510] to-[#001030]">
+        <div className="fixed inset-0 bg-[#0a0a1f] flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white"></div>
         </div>
       }
     >
       <VisualizationContent />
     </Suspense>
-  )
-}
+  );
+};
 
-export default VisualizationPage
+export default VisualizationPage;

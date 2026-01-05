@@ -1,89 +1,104 @@
-"use client"
+/* eslint-disable @typescript-eslint/no-unused-vars */
+"use client";
 
-import * as React from "react"
-import { Maximize2, Settings, Sparkles, Layers, Info,  Menu } from "lucide-react"
-import { motion } from "framer-motion"
-
+import * as React from "react";
+import {
+  Maximize2,
+  Settings,
+  Sparkles,
+  Layers,
+  Info,
+  Menu,
+} from "lucide-react";
+import { motion } from "framer-motion";
 
 interface SidebarProps {
-  defaultOpen?: boolean
-  position?: 'left' | 'right'
+  defaultOpen?: boolean;
+  position?: "left" | "right";
 }
 
-export function GeminiSidebar({ defaultOpen = false, position = 'right' }: SidebarProps) {
-  const [activeTab, setActiveTab] = React.useState("apis")
-  const [showTooltip, setShowTooltip] = React.useState(false)
-  const tooltipRef = React.useRef<HTMLDivElement>(null)
-  const [isOpen, setIsOpen] = React.useState(defaultOpen)
-  const sidebarRef = React.useRef<HTMLDivElement>(null)
-  const [isHovering, setIsHovering] = React.useState(false)
-  const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
-  const [isHovered, setIsHovered] = React.useState(false)
+export function GeminiSidebar({
+  defaultOpen = false,
+  position = "right",
+}: SidebarProps) {
+  const [activeTab, setActiveTab] = React.useState("apis");
+  const [showTooltip, setShowTooltip] = React.useState(false);
+  const tooltipRef = React.useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = React.useState(defaultOpen);
+  const sidebarRef = React.useRef<HTMLDivElement>(null);
+  const [isHovering, setIsHovering] = React.useState(false);
+  const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const [isHovered, setIsHovered] = React.useState(false);
 
   const handleMouseEnter = () => {
     if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current)
+      clearTimeout(hoverTimeoutRef.current);
     }
-    setIsHovering(true)
-    setIsOpen(true)
-  }
+    setIsHovering(true);
+    setIsOpen(true);
+  };
 
   const handleMouseLeave = () => {
     hoverTimeoutRef.current = setTimeout(() => {
-      setIsHovering(false)
-      setIsOpen(false)
-    }, 300) // Delay before closing
-  }
+      setIsHovering(false);
+      setIsOpen(false);
+    }, 300); // Delay before closing
+  };
 
   // Close tooltip when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (tooltipRef.current && !tooltipRef.current.contains(event.target as Node)) {
-        setShowTooltip(false)
+      if (
+        tooltipRef.current &&
+        !tooltipRef.current.contains(event.target as Node)
+      ) {
+        setShowTooltip(false);
       }
-    }
+    };
 
-    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (sidebarRef.current &&
+      if (
+        sidebarRef.current &&
         !sidebarRef.current.contains(event.target as Node) &&
-        isOpen) {
-        setIsOpen(false)
+        isOpen
+      ) {
+        setIsOpen(false);
       }
-    }
+    };
 
-    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [isOpen])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
 
   const stopScrollPropagation = (event: React.WheelEvent) => {
     event.stopPropagation();
   };
 
-
   return (
     <>
       {/* Hover trigger area */}
       <motion.div
-   ref={sidebarRef}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      initial={{ width: "60px" }}
-      animate={{ width: isHovered ? "380px" : "60px" }}
-      transition={{ duration: 0.3, ease: "easeInOut" }}
-      className={`fixed ${position === 'right' ? 'right-1' : 'left-1'} top-2 h-[calc(100vh-1rem)] z-40 flex 
+        ref={sidebarRef}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        initial={{ width: "60px" }}
+        animate={{ width: isHovered ? "380px" : "60px" }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        className={`fixed ${
+          position === "right" ? "right-1" : "left-1"
+        } top-2 h-[calc(100vh-1rem)] z-40 flex 
         bg-slate-600/40 rounded-2xl backdrop-blur-lg shadow-lg border border-slate-500/20
         hover:shadow-xl transition-shadow duration-300`}
       >
-
         <div className="flex flex-col items-center gap-2 p-2 w-[60px] ">
           <button className="p-2 hover:bg-gray-700/40 rounded-md transition">
             <Menu className="h-5 w-5 text-white" />
@@ -104,20 +119,22 @@ export function GeminiSidebar({ defaultOpen = false, position = 'right' }: Sideb
             <div className="flex">
               <button
                 onClick={() => setActiveTab("apis")}
-                className={`flex flex-1 items-center justify-center gap-2 py-3 transition-all ${activeTab === "apis"
-                  ? "border-b-2 border-b-gray-500 font-medium"
-                  : "border-b-2 border-transparent text-gray-400 hover:text-gray-300"
-                  }`}
+                className={`flex flex-1 items-center justify-center gap-2 py-3 transition-all ${
+                  activeTab === "apis"
+                    ? "border-b-2 border-b-gray-500 font-medium"
+                    : "border-b-2 border-transparent text-gray-400 hover:text-gray-300"
+                }`}
               >
                 <Settings className="h-4 w-4 text-slate-400" />
                 <span>APIs</span>
               </button>
               <button
                 onClick={() => setActiveTab("tools")}
-                className={`flex flex-1 items-center justify-center gap-2 py-3 transition-all ${activeTab === "tools"
-                  ? "border-b-2 border-gray-500 font-medium"
-                  : "border-b-2 border-transparent text-gray-400 hover:text-gray-300"
-                  }`}
+                className={`flex flex-1 items-center justify-center gap-2 py-3 transition-all ${
+                  activeTab === "tools"
+                    ? "border-b-2 border-gray-500 font-medium"
+                    : "border-b-2 border-transparent text-gray-400 hover:text-gray-300"
+                }`}
               >
                 <Layers className="h-4 w-4" />
                 <span>Tools</span>
@@ -132,7 +149,10 @@ export function GeminiSidebar({ defaultOpen = false, position = 'right' }: Sideb
                 <h2 className="mb-1 text-2xl font-medium">Assistant</h2>
                 <div className="flex items-center gap-1 text-sm text-gray-400">
                   <div className="relative">
-                    <button onClick={() => setShowTooltip(!showTooltip)} className="inline-flex items-center justify-center">
+                    <button
+                      onClick={() => setShowTooltip(!showTooltip)}
+                      className="inline-flex items-center justify-center"
+                    >
                       <Info className="h-4 w-4 cursor-pointer" />
                     </button>
 
@@ -152,7 +172,8 @@ export function GeminiSidebar({ defaultOpen = false, position = 'right' }: Sideb
               <div className="w-full px-8">
                 <div className="rounded-xl border border-gray-800 bg-gray-900/30 p-6 backdrop-blur-sm">
                   <p className="text-center text-sm text-gray-400">
-                    Ask me anything or use the tools above to explore different capabilities.
+                    Ask me anything or use the tools above to explore different
+                    capabilities.
                   </p>
                 </div>
               </div>
@@ -179,5 +200,5 @@ export function GeminiSidebar({ defaultOpen = false, position = 'right' }: Sideb
         </motion.div>
       </motion.div>
     </>
-  )
+  );
 }

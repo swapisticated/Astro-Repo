@@ -1,47 +1,58 @@
-"use client"
+/* eslint-disable @typescript-eslint/no-unused-vars */
+"use client";
 
-import * as React from "react"
-import { Settings, Sparkles,  Layers,  Info, ChevronRight, ChevronLeft } from "lucide-react"
-import { motion } from "framer-motion"
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { LoadingPulse } from './LoadingPulse';
-
+import * as React from "react";
+import {
+  Settings,
+  Sparkles,
+  Layers,
+  Info,
+  ChevronRight,
+  ChevronLeft,
+} from "lucide-react";
+import { motion } from "framer-motion";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { LoadingPulse } from "./LoadingPulse";
 
 interface SidebarProps {
-  defaultOpen?: boolean
-  position?: 'left' | 'right'
+  defaultOpen?: boolean;
+  position?: "left" | "right";
   summary?: string | null;
   fileName?: string;
   onClose?: () => void;
-
 }
 
-
-export function GeminiSidebar({ defaultOpen = false, position = "left", summary, fileName, onClose }: SidebarProps) {
-  const [activeTab, setActiveTab] = React.useState("apis")
-  const [showTooltip, setShowTooltip] = React.useState(false)
-  const tooltipRef = React.useRef<HTMLDivElement>(null)
+export function GeminiSidebar({
+  defaultOpen = false,
+  position = "left",
+  summary,
+  fileName,
+  onClose,
+}: SidebarProps) {
+  const [activeTab, setActiveTab] = React.useState("apis");
+  const [showTooltip, setShowTooltip] = React.useState(false);
+  const tooltipRef = React.useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = React.useState(defaultOpen);
-  const sidebarRef = React.useRef<HTMLDivElement>(null)
+  const sidebarRef = React.useRef<HTMLDivElement>(null);
   // const [isHovering, setIsHovering] = React.useState(false)
-  const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+  const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const handleMouseEnter = () => {
     if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current)
+      clearTimeout(hoverTimeoutRef.current);
     }
 
     // setIsHovering(true)
-    setIsOpen(true)
-  }
+    setIsOpen(true);
+  };
 
   const handleMouseLeave = () => {
     hoverTimeoutRef.current = setTimeout(() => {
       // setIsHovering(false)
-      setIsOpen(true)
-    }, 300) // Delay before closing
-  }
+      setIsOpen(true);
+    }, 300); // Delay before closing
+  };
 
   // Close tooltip when clicking outside
   // React.useEffect(() => {
@@ -59,19 +70,21 @@ export function GeminiSidebar({ defaultOpen = false, position = "left", summary,
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (sidebarRef.current &&
+      if (
+        sidebarRef.current &&
         !sidebarRef.current.contains(event.target as Node) &&
-        isOpen) {
-        setIsOpen(false)
+        isOpen
+      ) {
+        setIsOpen(false);
         onClose?.();
       }
-    }
+    };
 
-    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [isOpen, onClose])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
   React.useEffect(() => {
     setIsOpen(defaultOpen);
@@ -96,17 +109,14 @@ export function GeminiSidebar({ defaultOpen = false, position = "left", summary,
 
       <motion.div
         ref={sidebarRef}
-        initial={{ x: position === 'right' ? '100%' : '-100%' }}
-        animate={{ x: isOpen ? 0 : position === 'right' ? '100%' : '-100%' }}
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        initial={{ x: position === "right" ? "100%" : "-100%" }}
+        animate={{ x: isOpen ? 0 : position === "right" ? "100%" : "-100%" }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
         className={`fixed ${position}-0 top-0 h-full w-fit z-20 flex overflow-hidden`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-
         <div className="p-2 ">
-
-
           <div className="backdrop-blur-2xl flex h-full w-full max-w-[400px] flex-col bg-slate-600/30 rounded-xl text-white overflow-hidden z-4000">
             {/* Add close button */}
             <button
@@ -172,16 +182,19 @@ export function GeminiSidebar({ defaultOpen = false, position = "left", summary,
                 {/* <h2 className="mb-1 text-2xl font-medium">Assistant</h2> */}
                 <div className="flex items-center gap-1 text-sm text-gray-400">
                   <div className="relative">
-                    <button onClick={() => setShowTooltip(!showTooltip)} className="inline-flex items-center justify-center">
-                      <Info className="h-4 w-4 cursor-pointer" /> 
+                    <button
+                      onClick={() => setShowTooltip(!showTooltip)}
+                      className="inline-flex items-center justify-center"
+                    >
+                      <Info className="h-4 w-4 cursor-pointer" />
                     </button>
-                    
+
                     {showTooltip && (
                       <div
                         ref={tooltipRef}
-                        className="absolute top-full left-1/2 mb-2 -translate-x-1/2 rounded-md bg-gray-900/20 backdrop-blur-md px-3 py-1.5 text-xs shadow-lg min-w-fit flex items-center justify-center text-center"  
+                        className="absolute top-full left-1/2 mb-2 -translate-x-1/2 rounded-md bg-gray-900/20 backdrop-blur-md px-3 py-1.5 text-xs shadow-lg min-w-fit flex items-center justify-center text-center"
                       >
-                        <p >Cosmic AI Assistant</p>
+                        <p>Cosmic AI Assistant</p>
                         {/* <div className="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 bg-gray-800"></div> */}
                       </div>
                     )}
@@ -189,15 +202,17 @@ export function GeminiSidebar({ defaultOpen = false, position = "left", summary,
                 </div>
               </div>
               {/* Summary */}
-              <div className="p-6 overflow-y-auto max-h-screen"
-                onScroll={preventScrollPropagation}>
+              <div
+                className="p-6 overflow-y-auto max-h-screen"
+                onScroll={preventScrollPropagation}
+              >
                 {fileName && (
                   <h3 className="text-xl font-semibold text-purple-300 mb-4">
-                    {fileName} 🗎 
+                    {fileName} 🗎
                   </h3>
                 )}
                 <div className="prose prose-invert max-w-none">
-                  {summary === 'Loading summary...' ? (
+                  {summary === "Loading summary..." ? (
                     <LoadingPulse />
                   ) : summary ? (
                     // <ReactMarkdown
@@ -222,39 +237,74 @@ export function GeminiSidebar({ defaultOpen = false, position = "left", summary,
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        h1: ({ ...props }) => <h1 className="text-lg text-green-300 mb-2" {...props} />,
-                        h2: ({ ...props }) => <h2 className="text-base text-yellow-200 mb-2" {...props} />,
-                        h3: ({ ...props }) => <h3 className="text-sm text-red-100 mb-2" {...props} />,
+                        h1: ({ ...props }) => (
+                          <h1
+                            className="text-lg text-green-300 mb-2"
+                            {...props}
+                          />
+                        ),
+                        h2: ({ ...props }) => (
+                          <h2
+                            className="text-base text-yellow-200 mb-2"
+                            {...props}
+                          />
+                        ),
+                        h3: ({ ...props }) => (
+                          <h3
+                            className="text-sm text-red-100 mb-2"
+                            {...props}
+                          />
+                        ),
 
-                        ul: ({ ...props }) => <ul className="list-disc pl-4 mb-2 text-gray-200" {...props} />,
-                        li: ({ ...props }) => <li className="mb-1" {...props} />,
-                        p: ({ ...props }) => <p className="text-gray-200 mb-2" {...props} />,
+                        ul: ({ ...props }) => (
+                          <ul
+                            className="list-disc pl-4 mb-2 text-gray-200"
+                            {...props}
+                          />
+                        ),
+                        li: ({ ...props }) => (
+                          <li className="mb-1" {...props} />
+                        ),
+                        p: ({ ...props }) => (
+                          <p className="text-gray-200 mb-2" {...props} />
+                        ),
 
-                        code({ inline, children, ...props }: React.HTMLAttributes<HTMLElement> & { inline?: boolean }) {
+                        code({
+                          inline,
+                          children,
+                          ...props
+                        }: React.HTMLAttributes<HTMLElement> & {
+                          inline?: boolean;
+                        }) {
                           return inline ? (
-                            <code className="bg-gray-700/60 text-gray-100 px-1 py-0.5 rounded" {...props}>
+                            <code
+                              className="bg-gray-700/60 text-gray-100 px-1 py-0.5 rounded"
+                              {...props}
+                            >
                               {children}
                             </code>
                           ) : (
-                            <code className=" text-purple-300 rounded px-2 py-1 mb-2 inline-block" {...props}>
+                            <code
+                              className=" text-purple-300 rounded px-2 py-1 mb-2 inline-block"
+                              {...props}
+                            >
                               {children}
                             </code>
                           );
                         },
                       }}
                     >
-                      {summary || ''}
+                      {summary || ""}
                     </ReactMarkdown>
                   ) : null}
                 </div>
               </div>
-
-
             </div>
             <div className="w-full  px-8">
               <div className="rounded-xl border border-gray-800 bg-gray-900/30 p-6 backdrop-blur-sm">
                 <p className="text-center text-sm text-gray-400">
-                  Ask me anything or use the tools above to explore different capabilities.
+                  Ask me anything or use the tools above to explore different
+                  capabilities.
                 </p>
               </div>
             </div>
@@ -287,16 +337,25 @@ export function GeminiSidebar({ defaultOpen = false, position = "left", summary,
               onClose?.();
             }
           }}
-          className={`absolute ${position === 'right' ? '-left-8' : '-right-8'} top-1/2 transform -translate-y-1/2 bg-black p-2 ${position === 'right' ? 'rounded-l-xl' : 'rounded-r-xl'}`}
+          className={`absolute ${
+            position === "right" ? "-left-8" : "-right-8"
+          } top-1/2 transform -translate-y-1/2 bg-black p-2 ${
+            position === "right" ? "rounded-l-xl" : "rounded-r-xl"
+          }`}
         >
           {isOpen ? (
-            position === 'right' ? <ChevronRight className="w-4 h-4 text-gray-400" /> : <ChevronLeft className="w-4 h-4 text-gray-400" />
+            position === "right" ? (
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+            ) : (
+              <ChevronLeft className="w-4 h-4 text-gray-400" />
+            )
+          ) : position === "right" ? (
+            <ChevronLeft className="w-4 h-4 text-gray-400" />
           ) : (
-            position === 'right' ? <ChevronLeft className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />
+            <ChevronRight className="w-4 h-4 text-gray-400" />
           )}
         </button>
-
       </motion.div>
     </>
-  )
+  );
 }
