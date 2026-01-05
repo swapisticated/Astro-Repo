@@ -30,9 +30,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ExplainMyShit - Visualize GitHub Repositories",
+  title: "GraphIt - Visualize GitHub Repositories",
   description:
-    "Transform GitHub repositories into beautiful, interactive visualizations. Explore code structure and get AI-powered insights.",
+    "Transform GitHub repositories into beautiful, interactive visualizations with GraphIt. Explore code structure and get AI-powered insights.",
 };
 
 export default function RootLayout({

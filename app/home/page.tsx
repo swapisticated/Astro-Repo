@@ -2,12 +2,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Palette,
   Github,
   Sparkles,
-  Code2,
-  FolderTree,
-  Zap,
   ArrowRight,
   GitBranch,
   Star,
@@ -72,37 +68,6 @@ const themeConfig = {
     stars: false,
   },
 };
-
-// Features data
-const features = [
-  {
-    icon: FolderTree,
-    title: "Repository Structure",
-    description:
-      "Visualize your entire codebase as an interactive force-directed graph",
-    modern: { color: "text-purple-400", bg: "bg-purple-500/10" },
-    pencil: { color: "text-gray-900", bg: "bg-gray-100" },
-    comic: { color: "text-rose-500", bg: "bg-rose-100" },
-  },
-  {
-    icon: Code2,
-    title: "AI Code Analysis",
-    description:
-      "Get intelligent summaries and explanations for any file or folder",
-    modern: { color: "text-pink-400", bg: "bg-pink-500/10" },
-    pencil: { color: "text-gray-900", bg: "bg-gray-100" },
-    comic: { color: "text-orange-500", bg: "bg-orange-100" },
-  },
-  {
-    icon: Zap,
-    title: "Interactive Exploration",
-    description:
-      "Click to expand, drag to explore, and dive deep into your code",
-    modern: { color: "text-blue-400", bg: "bg-blue-500/10" },
-    pencil: { color: "text-gray-900", bg: "bg-gray-100" },
-    comic: { color: "text-purple-500", bg: "bg-purple-100" },
-  },
-];
 
 // Star component for modern theme
 const Star3D = ({ style }: { style: React.CSSProperties }) => (
@@ -174,8 +139,6 @@ const Home = () => {
   const [stars, setStars] = useState<
     { top: number; left: number; size: number; delay: number }[]
   >([]);
-  const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
-  const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
 
   const config = themeConfig[theme];
 
@@ -211,12 +174,6 @@ const Home = () => {
       : "";
     window.location.href = `/visualization?owner=${owner}&repo=${sanitizedRepo}${branchParam}`;
   }, [url, branch]);
-
-  const themeLabels: Record<ThemeType, { name: string; icon: string }> = {
-    modern: { name: "Modern", icon: "✨" },
-    pencil: { name: "Pencil", icon: "✏️" },
-    comic: { name: "Comic", icon: "🎨" },
-  };
 
   return (
     <div
@@ -317,9 +274,7 @@ const Home = () => {
           >
             <Sparkles className="w-5 h-5 text-white" />
           </div>
-          <span className={`text-xl font-bold ${config.text}`}>
-            ExplainMyShit
-          </span>
+          <span className={`text-xl font-bold ${config.text}`}>GraphIt</span>
         </motion.div>
       </motion.nav>
 
@@ -524,8 +479,8 @@ const Home = () => {
         className={`relative z-10 text-center py-8 border-t ${config.cardBorder} ${config.font}`}
       >
         <p className={`text-sm ${config.textMuted}`}>
-          © {new Date().getFullYear()} ExplainMyShit • Open Source • Made with
-          💜 for developers
+          © {new Date().getFullYear()} GraphIt • Open Source • Made with 💜 for
+          developers
         </p>
       </footer>
     </div>
